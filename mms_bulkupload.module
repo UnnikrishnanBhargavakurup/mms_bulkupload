@@ -9,7 +9,7 @@
  */
 
 // where should the uploaded images go
-define("PRODUCT_IMG_PATH", "product_images/");
+define("PRODUCT_IMG_PATH", "/");
 
 /**
  * Implements hook_menu().
@@ -84,6 +84,7 @@ function mms_bulkupload_form_submit($form, &$form_state) {
         $uri = file_unmanaged_move($source, $destination, FILE_EXISTS_REPLACE);
         if($uri === FALSE) {
           drupal_set_message("Unable to replace the file please check the permissions", 'error');
+          continue;
         }
         else {
           /**
@@ -107,6 +108,7 @@ function mms_bulkupload_form_submit($form, &$form_state) {
         $uri = file_unmanaged_move($source, $destination, FILE_EXISTS_RENAME);
         if($uri === FALSE) {
           drupal_set_message("Unable to copy file please check the permissions", 'error');
+          continue;
         }
         else {
           $files_new++;
