@@ -1,0 +1,8 @@
+name = Miss Mary staff bulkupload
+description = Bulk upload product image files for Miss Mary staff.
+package = Miss Mary
+core = 7.x
+files[] = mms_bulkupload.module
+dependencies[] = plupload
+
+

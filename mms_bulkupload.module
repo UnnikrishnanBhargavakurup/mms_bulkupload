@@ -1,0 +1,133 @@
+<?php
+
+/**
+ * @file
+ * For bulk upload product image files by Miss Mary staff.
+ *
+ * If the file already exist we will replace it
+ * otherwise save it as a new file.
+ */
+
+// where should the uploaded images go
+define("PRODUCT_IMG_PATH", "product_images/");
+
+/**
+ * Implements hook_menu().
+ */
+function mms_bulkupload_menu() {
+  $items = array();
+  $items['admin/upload-images'] = array(
+    'title' => 'Builk upload product images',
+    'description' => 'For uploading product images by Miss Mary staff',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mms_bulkupload_form'),
+    'access arguments' => array('administer site'),
+  );
+  return $items;
+}
+
+/**
+ * Form for uploading product images.
+ */
+function mms_bulkupload_form($form, $form_state) {
+  $form['product_images'] = array(
+    '#type' => 'plupload',
+    '#title' => t('Upload product images'),
+    '#description' => t('Drag and drop product images or click on Add file to upload product images.'),
+    '#upload_validators' => array(
+      'file_validate_extensions' => array('jpg jpeg'),
+    )
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Submit',
+  );
+  return $form;
+}
+
+/**
+ * Submit callback for mms_bulkupload_form form.
+ */
+function mms_bulkupload_form_submit($form, &$form_state) {
+  $saved_files = array();
+  $scheme = variable_get('file_default_scheme', 'public') . '://'. PRODUCT_IMG_PATH;
+  $error = FALSE;
+  $files_replaced = 0;
+  $files_new = 0;
+  $total_files = count($form_state['values']['product_images']);
+  // We can't use file_save_upload() because of
+  // http://www.jacobsingh.name/content/tight-coupling-no-not
+  // file_uri_to_object();
+  foreach ($form_state['values']['product_images'] as $uploaded_file) {
+    if(
+      !(
+          strpos($uploaded_file['name'],'_detail_') !== false ||
+          strpos($uploaded_file['name'],'_extra_') !== false ||
+          strpos($uploaded_file['name'],'_catalog_')
+        )
+    )
+    {
+      drupal_set_message("'". $uploaded_file['name']. "' cannot  be uploaded becuse invalid product image name.",'error');
+      $total_files--;
+      continue;
+    }
+    if ($uploaded_file['status'] == 'done') {
+      $source = $uploaded_file['tmppath'];
+      $destination = file_stream_wrapper_uri_normalize($scheme . $uploaded_file['name']);
+      // If a file exist with same uri we need to replace it
+      $existing_file = db_select('file_managed', 'f')
+      ->fields('f', array('fid', ))
+      ->condition('uri', $destination)
+      ->execute()
+      ->fetchField();
+      if($existing_file) {
+        $uri = file_unmanaged_move($source, $destination, FILE_EXISTS_REPLACE);
+        if($uri === FALSE) {
+          drupal_set_message("Unable to replace the file please check the permissions", 'error');
+        }
+        else {
+          /**
+           * Update time and size in file_managed database table.
+           */
+          db_update('file_managed')
+          ->fields(array(
+            'timestamp' => time(),
+            'filesize' => @filesize($uri),
+          ))
+          ->condition('uri', $uri)
+          ->execute();
+          // count replaced images
+          $files_replaced++;
+        }
+      }
+      else {
+        // Rename it to its original name, and put it in its final home.
+        // Note - not using file_move here because if we call file_get_mime
+        // (in file_uri_to_object) while it has a .tmp extension, it horks.
+        $uri = file_unmanaged_move($source, $destination, FILE_EXISTS_RENAME);
+        if($uri === FALSE) {
+          drupal_set_message("Unable to copy file please check the permissions", 'error');
+        }
+        else {
+          $files_new++;
+        }
+        $file = plupload_file_uri_to_object($uri);
+        file_save($file);
+        $error = TRUE;
+      }
+    }
+    else {
+
+      // @todo: move this to element validate or something and clean up t().
+      form_set_error('product_images', "Upload of {$uploaded_file['name']} failed");
+    }
+  }
+  if(!$error) {
+    drupal_set_message(t(":total_files files uploaded: :files_new new files, :files_replaced files replaced.", array(
+        ":total_files" => $total_files,
+        ":files_new" => $files_new,
+        ":files_replaced" => $files_replaced
+      )
+    ));
+  }
+}
