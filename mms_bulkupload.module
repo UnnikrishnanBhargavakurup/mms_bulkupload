@@ -23,6 +23,14 @@ function mms_bulkupload_menu() {
     'page arguments' => array('mms_bulkupload_form'),
     'access arguments' => array('administer site'),
   );
+  $items['admin/config/bulkupload'] = array(
+    'title' => 'Bulk upload settings',
+    'description' => 'Specify the upload folder for product images',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mms_bulkupload_settings'),
+    'file' => 'mms_bulkupload.admin.inc',
+    'access arguments' => array('administer site configuration'),
+  );
   return $items;
 }
 
