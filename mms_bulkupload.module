@@ -8,9 +8,6 @@
  * otherwise save it as a new file.
  */
 
-// where should the uploaded images go
-define("PRODUCT_IMG_PATH", "product_images/");
-
 /**
  * Implements hook_menu().
  */
@@ -21,7 +18,7 @@ function mms_bulkupload_menu() {
     'description' => 'For uploading product images by Miss Mary staff',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('mms_bulkupload_form'),
-    'access arguments' => array('administer site'),
+    'access arguments' => array('administer site configuration'),
   );
   $items['admin/config/bulkupload'] = array(
     'title' => 'Bulk upload settings',
@@ -58,7 +55,7 @@ function mms_bulkupload_form($form, $form_state) {
  */
 function mms_bulkupload_form_submit($form, &$form_state) {
   $saved_files = array();
-  $scheme = variable_get('file_default_scheme', 'public') . '://'. PRODUCT_IMG_PATH;
+  $scheme = variable_get('file_default_scheme', 'public') . '://'. variable_get('mms_bulkupload_path', '');
   $error = FALSE;
   $files_replaced = 0;
   $files_new = 0;
